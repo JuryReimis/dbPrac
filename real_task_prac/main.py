@@ -1,26 +1,30 @@
+import asyncio
+from time import time
+
 from real_task_prac.config import DATE_FORMAT
 from real_task_prac.file_processor import FileProcessor
 from real_task_prac.models import Result
-from real_task_prac.models.database import BaseModel, engine, Session
+from real_task_prac.models.database import BaseModel, async_engine, AsyncSession
 from real_task_prac.parsers.url_parser import UrlParser
 
 
-if __name__ == '__main__':
-    BaseModel.metadata.drop_all(engine)
-    BaseModel.metadata.create_all(engine)
+async def main():
+    async with async_engine.connect() as conn:
+        await conn.run_sync(BaseModel.metadata.drop_all)
+        await conn.run_sync(BaseModel.metadata.create_all)
 
     url_parser = UrlParser()
-    urls = url_parser.parse()
+    urls = await url_parser.parse()
     file_processor = FileProcessor(urls, url_parser)
-    file_processor.write_files()
-    tables = file_processor.iterate_files()
+    await file_processor.write_files()
+    tables = await file_processor.iterate_files()
 
     for key in sorted(tables.keys()):
         # Для каждого отчета создается своя транзакция
-        with Session() as sess:
+        async with AsyncSession() as sess:
             print(f"Запись отчета за {key.strftime(DATE_FORMAT)}")
             new_rows = []
-            for dto in file_processor.get_rows(tables[key]):
+            async for dto in file_processor.get_rows(tables[key]):
                 result_data = {
                     'exchange_product_id': dto.exchange_product_id,
                     'exchange_product_name': dto.exchange_product_name,
@@ -33,6 +37,16 @@ if __name__ == '__main__':
                     'count': dto.count,
                     'date': key
                 }
-                new_rows.append(result_data)
-            sess.bulk_insert_mappings(Result, new_rows)
-            sess.commit()
+                new_rows.append(Result(**result_data))
+            sess.add_all(new_rows)
+            await sess.commit()
+
+
+if __name__ == '__main__':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    start_time = time()
+
+    asyncio.run(main())
+
+    print(f"Общее время выполнения: {time() - start_time}")
