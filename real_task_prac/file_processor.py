@@ -10,6 +10,7 @@ from pandas import DataFrame
 
 from real_task_prac.config import BULLETINS_DIR, DATE_FORMAT
 from real_task_prac.dto.row_to_result_model_dto import RowToResultModelDTO
+from real_task_prac.models.database import AsyncSession
 from real_task_prac.parsers.XLS_parser import XLSParser
 from real_task_prac.parsers.url_parser import UrlParser
 
@@ -61,17 +62,15 @@ class FileProcessor:
         await asyncio.gather(*tasks, return_exceptions=True)
         print(f"Запись файлов на диск завершена за {time() - start_time}")
 
-    async def iterate_files(self) -> dict[datetime, DataFrame]:
+    async def iterate_files(self, insert_method, session: AsyncSession) -> None:
         start_time = time()
-        tables = dict()
 
         for file in BULLETINS_DIR.iterdir():
             if file.is_file() and file.suffix == '.xls':
                 dictionary, result, date = XLSParser(file).read_excel()
                 if result is not None and date:
-                    tables[await self.get_date_format(date)] = result
-        print(f"Обработка файлов завершена за {time() - start_time}")
-        return tables
+                    await insert_method(result, await self.get_date_format(date), session, self)
+        print(f"Обработка файлов + запись в бд завершены за {time() - start_time}")
 
     @staticmethod
     async def get_rows(table: DataFrame) -> Generator[RowToResultModelDTO, None, None]:
