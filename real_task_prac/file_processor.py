@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+from time import time
 from typing import Generator
 
 from pandas import DataFrame
@@ -31,6 +32,7 @@ class FileProcessor:
         return date_format
 
     def write_files(self):
+        start_time = time()
         for url in self.links:
             file_name = Path(url).name.split(
                 '.xls'
@@ -41,13 +43,16 @@ class FileProcessor:
             if response.status_code == 200:
                 with (BULLETINS_DIR / file_name).open(mode='wb') as f:
                     f.write(response.content)
+        print(f"Загрузка и запись файлов на диск завершена за {time() - start_time}")
 
     def iterate_files(self) -> dict[datetime, DataFrame]:
+        start_time = time()
         tables = dict()
         for file in BULLETINS_DIR.iterdir():
             if file.is_file() and file.suffix == '.xls':
                 dictionary, result, date = XLSParser(file).read_excel()
                 tables[self.get_date_format(date)] = result
+        print(f"Обработка файлов завершена за {time() - start_time}")
         return tables
 
     @staticmethod

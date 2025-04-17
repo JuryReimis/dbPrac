@@ -1,3 +1,5 @@
+from time import time
+
 from real_task_prac.config import DATE_FORMAT
 from real_task_prac.file_processor import FileProcessor
 from real_task_prac.models import Result
@@ -6,6 +8,7 @@ from real_task_prac.parsers.url_parser import UrlParser
 
 
 if __name__ == '__main__':
+    start_time = time()
     BaseModel.metadata.drop_all(engine)
     BaseModel.metadata.create_all(engine)
 
@@ -15,6 +18,7 @@ if __name__ == '__main__':
     file_processor.write_files()
     tables = file_processor.iterate_files()
 
+    start_insert_time = time()
     for key in sorted(tables.keys()):
         # Для каждого отчета создается своя транзакция
         with Session() as sess:
@@ -36,3 +40,5 @@ if __name__ == '__main__':
                 new_rows.append(result_data)
             sess.bulk_insert_mappings(Result, new_rows)
             sess.commit()
+    print(f"Загрузка в базу данных завершена за {time() - start_insert_time}")
+    print(f"Общее время выполнения {time() - start_time}")

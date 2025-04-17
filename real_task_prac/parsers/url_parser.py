@@ -1,4 +1,5 @@
 from datetime import datetime
+from time import time
 
 import requests
 from bs4 import Tag, BeautifulSoup
@@ -38,6 +39,7 @@ class UrlParser:
         return result, break_flag
 
     def parse(self) -> list[str]:
+        start_time = time()
         result = []
         page = 1
         while True:
@@ -53,6 +55,7 @@ class UrlParser:
             if break_flag is True:
                 break
             page += 1
+        print(f"Парсинг завершен за {time() - start_time}")
         return result
 
     @staticmethod
