@@ -1,2 +1,6 @@
 /training_prac/.env
 /real_task_prac/.env
+/.idea
+*/bulletins
+
+**/__pycache__/
