@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 from pathlib import Path
+from time import time
 from typing import Generator
 
 import aiofiles
@@ -42,6 +43,7 @@ class FileProcessor:
         file_names = []
         tasks = []
         async with aiohttp.ClientSession() as sess:
+            start_download_time = time()
             for url in self.links:
                 file_name = Path(url).name.split(
                     '.xls'
@@ -51,18 +53,24 @@ class FileProcessor:
                     continue
                 tasks.append(asyncio.create_task(self.parser.download_by_link(url, sess)))
             responses = await asyncio.gather(*tasks, return_exceptions=True)
+            print(f"Загрузка файлов завершена за {time() - start_download_time}")
         tasks = []
+        start_time = time()
         for i, response in enumerate(responses):
             tasks.append(async_write(i, response))
         await asyncio.gather(*tasks, return_exceptions=True)
+        print(f"Запись файлов на диск завершена за {time() - start_time}")
 
     async def iterate_files(self) -> dict[datetime, DataFrame]:
+        start_time = time()
         tables = dict()
 
         for file in BULLETINS_DIR.iterdir():
             if file.is_file() and file.suffix == '.xls':
                 dictionary, result, date = XLSParser(file).read_excel()
-                tables[await self.get_date_format(date)] = result
+                if result is not None and date:
+                    tables[await self.get_date_format(date)] = result
+        print(f"Обработка файлов завершена за {time() - start_time}")
         return tables
 
     @staticmethod

@@ -1,8 +1,9 @@
 from datetime import datetime
+from time import time
 
 import requests
 import aiohttp
-from aiohttp import ClientSession, ClientConnectorError
+from aiohttp import ClientSession, ClientConnectorError, TCPConnector
 from bs4 import Tag, BeautifulSoup
 from fake_useragent import UserAgent
 
@@ -22,7 +23,7 @@ class UrlParser:
 
     async def get_data_from_site(self, url: str) -> BeautifulSoup | None:
         try:
-            async with aiohttp.ClientSession() as sess:
+            async with aiohttp.ClientSession(connector=TCPConnector(limit=15)) as sess:
                 async with sess.get(url, headers={'User-Agent': UserAgent().random}) as response:
                     if response.status == 404:
                         return None
@@ -45,6 +46,7 @@ class UrlParser:
         return result, break_flag
 
     async def parse(self) -> list[str]:
+        start_time = time()
         result = []
         page = 1
         while True:
@@ -60,6 +62,7 @@ class UrlParser:
             if break_flag is True:
                 break
             page += 1
+        print(f"Парсинг закончен за {time() - start_time}")
         return result
 
     @staticmethod

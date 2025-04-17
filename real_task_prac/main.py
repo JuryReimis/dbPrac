@@ -19,6 +19,7 @@ async def main():
     await file_processor.write_files()
     tables = await file_processor.iterate_files()
 
+    start_insert_time = time()
     for key in sorted(tables.keys()):
         # Для каждого отчета создается своя транзакция
         async with AsyncSession() as sess:
@@ -40,6 +41,7 @@ async def main():
                 new_rows.append(Result(**result_data))
             sess.add_all(new_rows)
             await sess.commit()
+    print(f"Загрузка в базу данных завершена за {time() - start_insert_time}")
 
 
 if __name__ == '__main__':
